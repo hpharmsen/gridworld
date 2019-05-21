@@ -1,10 +1,11 @@
 import sys
 import contextlib
+import copy
+import datetime
+from functools import partial
+
 with contextlib.redirect_stdout(None):  # Suppress Hello from Pygame community message
     import pygame
-import copy
-from functools import partial
-import datetime
 
 def log(*args):
     print(datetime.datetime.now().time(), ' '.join([str(a) for a in args]))
