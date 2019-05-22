@@ -1,4 +1,3 @@
-import sys
 import contextlib
 import copy
 import datetime
@@ -7,8 +6,11 @@ from functools import partial
 with contextlib.redirect_stdout(None):  # Suppress Hello from Pygame community message
     import pygame
 
+logging = False
 def log(*args):
-    print(datetime.datetime.now().time(), ' '.join([str(a) for a in args]))
+    global logging
+    if logging:
+        print(datetime.datetime.now().time(), ' '.join([str(a) for a in args]))
 
 # Define some colors
 LIGHTGRAY = (192, 192, 192)
@@ -83,7 +85,8 @@ class Grid(GridBase):
 
         self.draw_actions = {}  # dict of symbol/function pairs that indicate how to draw each symbol
         self.auto_update = False # Weather to redraw the screen with every change in the grid
-        # self.grid = [['' for x in range(self.width)] for y in range(self.height)]
+        self.update_automatic = True # No need to manually update or flip
+        self.update_fullscreen = True # Full screen flip each frame. Set to False for only redrawing the effected area
 
         pygame.init()
         pygame.display.set_caption(title)
@@ -128,12 +131,7 @@ class Grid(GridBase):
     def redraw(self):
         log('redraw')
         self.screen.fill(self.margincolor)
-        for y in range(self.height):
-            for x in range(self.width):
-                self.draw_cell(x, y)
-        pygame.display.flip()
-        log('clock_redraw')
-        self.clock.tick(self.framerate)
+        self.redraw_area(0,0,self.width,self.height)
         log('end_redraw')
 
     def redraw_area(self, left, top, width, height ):
@@ -143,11 +141,15 @@ class Grid(GridBase):
                 log('draw_cell')
                 self.draw_cell(x, y)
         cell_dimensions = self.cell_dimensions(left, top, width, height)
-        log( 'flip', cell_dimensions)
-        pygame.display.flip()
-        #pygame.display.update(cell_dimensions)
-        log('clock_redraw_area')
-        self.clock.tick(self.framerate)
+        if self.update_automatic:
+            if self.update_fullscreen:
+                log('flip')
+                pygame.display.flip()
+            else:
+                log('update', cell_dimensions)
+                pygame.display.update(cell_dimensions)
+            #log('clock_redraw_area')
+            #self.clock.tick(self.framerate)
         log('end_redraw_area')
 
     def redraw_cell(self, left, top):
@@ -155,12 +157,8 @@ class Grid(GridBase):
 
     def run(self):
         self.redraw()
-        #self.auto_update = True # From now on, update the screen on every change in the grid
         # -------- Main Program Loop -----------
         while True:
-            # pressed = pygame.key.get_pressed()
-            # f pressed[pygame.K_LEFT]:
-            #    self.key_action(self, pygame.K_LEFT)
             for event in pygame.event.get():  # User did something
                 if event.type == pygame.KEYDOWN:
                     if  event.key == pygame.K_f:
@@ -177,8 +175,6 @@ class Grid(GridBase):
 
             # --- Game logic
             self.frame_action(self)
-
-            #self.redraw()
 
             # --- Limit to x frames per second
             self.clock.tick(self.framerate)
@@ -261,9 +257,9 @@ def draw_character_cell(grid, cell_dimensions, character='?'):
 
 
 if __name__ == '__main__':
-    grid = Grid(4, 2, 90, 90, title='Boter, Kaas en Eieren', margin=1)
-    grid[0, 0] = '0'
-    grid[1, 1] = '1'
-    grid[2, 1] = '2'
-    grid[3, 1] = '3'
+    grid = Grid(3, 3, 90, 90, title='Tic Tac Toe', margin=1)
+    grid[0, 0] = 'O'
+    grid[1, 1] = 'X'
+    grid[2, 1] = 'O'
+    grid[2, 2] = 'X'
     grid.run()
