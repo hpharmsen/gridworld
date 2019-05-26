@@ -7,10 +7,13 @@ with contextlib.redirect_stdout(None):  # Suppress Hello from Pygame community m
     import pygame
 
 logging = False
+
+
 def log(*args):
     global logging
     if logging:
         print(datetime.datetime.now().time(), ' '.join([str(a) for a in args]))
+
 
 # Define some colors
 LIGHTGRAY = (192, 192, 192)
@@ -22,6 +25,7 @@ LEFT = 1
 TOP = 2
 RIGHT = 3
 BOTTOM = 4
+
 
 class GridBase:
     def __init__(self, width, height):
@@ -64,9 +68,9 @@ class Grid(GridBase):
         margincolor=DARKGRAY,
         itemfont=None,
         framerate=60,
-        statusbar_position = NONE,
-        statusbar_size = 0,
-        full_screen = False
+        statusbar_position=NONE,
+        statusbar_size=0,
+        full_screen=False,
     ):
 
         super().__init__(width, height)
@@ -84,9 +88,8 @@ class Grid(GridBase):
         self.full_screen = full_screen
 
         self.draw_actions = {}  # dict of symbol/function pairs that indicate how to draw each symbol
-        self.auto_update = False # Weather to redraw the screen with every change in the grid
-        self.update_automatic = True # No need to manually update or flip
-        self.update_fullscreen = True # Full screen flip each frame. Set to False for only redrawing the effected area
+        self.update_fullscreen = True  # Full screen flip each frame. Set to False for only redrawing the effected area
+        self.update_automatic = True  #  Weather to redraw the screen with every change in the grid
 
         pygame.init()
         pygame.display.set_caption(title)
@@ -98,12 +101,12 @@ class Grid(GridBase):
         self.font = pygame.font.Font(self.itemfont, int(cellheight * 0.88))
 
     def set_screen_dimensions(self):
-        statusbar_width = self.statusbar_size if self.statusbar_position in (LEFT,RIGHT) else 0
-        statusbar_height = self.statusbar_size if self.statusbar_position in (TOP,BOTTOM) else 0
+        statusbar_width = self.statusbar_size if self.statusbar_position in (LEFT, RIGHT) else 0
+        statusbar_height = self.statusbar_size if self.statusbar_position in (TOP, BOTTOM) else 0
         if self.full_screen:
             infoObject = pygame.display.Info()
             self.oldcellwidth = self.cellwidth
-            self.cellwidth = int((infoObject.current_w-statusbar_width) / self.width - self.margin)
+            self.cellwidth = int((infoObject.current_w - statusbar_width) / self.width - self.margin)
             self.cellheght = int(self.cellheight * self.cellwidth / self.oldcellwidth)
             self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         else:
@@ -113,31 +116,53 @@ class Grid(GridBase):
             )
             self.screen = pygame.display.set_mode(screen_size)
 
-
     def __setitem__(self, coo, value):
         log('start_set')
-        super().__setitem__(coo,value)
-        if self.auto_update:
+        super().__setitem__(coo, value)
+        if self.update_automatic:
             self.redraw_cell(*coo)
         log('end_set')
 
-    def frame_action(self, _):
-        pass  # Should be overwritten by using program
+    ######## Callback functions that can be overwritten by the user ############
 
-    def key_action(self, _, key):
-        pass  # Should be overwritten by using program
+    def frame_action(self):
+        # Is called once every frame.
+        # Should be overwritten by using program
+        pass
 
+    def key_action(self, key):
+        # Is fired when a key is pressed. Parameter key is the Pygame key code.
+        # Should be overwritten by using program
+        pass
+
+    def mouse_click_action(self, pos):
+        # Is fired whenever the window receives a mouse click
+        # Parameter pos,  (x,y) tuple, is the position (in pixels) of the click
+        # Should be overwritten by using program
+        pass
+
+    def cell_click_action(self, cell):
+        # Is fired whenever a cell receives a mouse click
+        # Paramegter cell, (x,y) tuple, is the cell that was clicked
+        # Should be overwritten by using program
+        pass
+
+    def update_statusbar(self):
+        # Is called whenever the screen is redrawn. Gives you the possibility to update the contents of the statusbar
+        # Should be overwritten by using program
+        pass
 
     def redraw(self):
         log('redraw')
         self.screen.fill(self.margincolor)
-        self.redraw_area(0,0,self.width,self.height)
+        self.redraw_area(0, 0, self.width, self.height)
+        self.update_statusbar()
         log('end_redraw')
 
-    def redraw_area(self, left, top, width, height ):
-        log( 'redraw_area' )
-        for y in range(top, top+height):
-            for x in range(left, left+width):
+    def redraw_area(self, left, top, width, height):
+        log('redraw_area')
+        for y in range(top, top + height):
+            for x in range(left, left + width):
                 log('draw_cell')
                 self.draw_cell(x, y)
         cell_dimensions = self.cell_dimensions(left, top, width, height)
@@ -148,12 +173,12 @@ class Grid(GridBase):
             else:
                 log('update', cell_dimensions)
                 pygame.display.update(cell_dimensions)
-            #log('clock_redraw_area')
-            #self.clock.tick(self.framerate)
+            # log('clock_redraw_area')
+            # self.clock.tick(self.framerate)
         log('end_redraw_area')
 
     def redraw_cell(self, left, top):
-        self.redraw_area(left,top,1,1)
+        self.redraw_area(left, top, 1, 1)
 
     def run(self):
         self.redraw()
@@ -161,12 +186,18 @@ class Grid(GridBase):
         while True:
             for event in pygame.event.get():  # User did something
                 if event.type == pygame.KEYDOWN:
-                    if  event.key == pygame.K_f:
+                    if event.key == pygame.K_f:
                         self.full_screen = not self.full_screen
                         self.set_screen_dimensions()
                         self.redraw()
                     else:
-                        self.key_action(self, event.key)
+                        self.key_action(event.key)
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    pos = pygame.mouse.get_pos()
+                    self.mouse_click_action(pos)
+                    coo = self.cell_at_position(pos)
+                    if coo:
+                        self.cell_click_action(coo)
                 elif event.type == pygame.QUIT:  # If user clicked close
                     pygame.quit()
                     return
@@ -174,22 +205,39 @@ class Grid(GridBase):
                     self.redraw()
 
             # --- Game logic
-            self.frame_action(self)
+            self.frame_action()
 
             # --- Limit to x frames per second
             self.clock.tick(self.framerate)
 
-    def cell_dimensions(self,x,y,w=1,h=1):
+    def cell_dimensions(self, x, y, w=1, h=1):
         cell_x = (self.margin + self.cellwidth) * x + self.margin
         if self.statusbar_position == LEFT:
             cell_x += self.statusbar_size
         cell_y = (self.margin + self.cellheight) * y + self.margin
         if self.statusbar_position == TOP:
             cell_y += self.statusbar_size
-        return cell_x,cell_y, (self.cellwidth+self.margin)*w-self.margin, (self.cellheight+self.margin)*h-self.margin
+        return (
+            cell_x,
+            cell_y,
+            (self.cellwidth + self.margin) * w - self.margin,
+            (self.cellheight + self.margin) * h - self.margin,
+        )
+
+    def cell_at_position(self, pos):
+        cell_x, cell_y = pos
+        if self.statusbar_position == LEFT:
+            cell_x -= self.statusbar_size
+        if self.statusbar_position == TOP:
+            cell_y -= self.statusbar_size
+        x = cell_x // (self.cellwidth + self.margin)
+        y = cell_y // (self.cellheight + self.margin)
+        if x < 0 or x >= self.width or y < 0 or y >= self.height:
+            return None
+        return (x, y)
 
     def draw_cell(self, x, y):
-        cell_dimensions = self.cell_dimensions(x,y)
+        cell_dimensions = self.cell_dimensions(x, y)
         draw_action = self.draw_actions.get(self[x, y])
         if not draw_action:
             draw_action = partial(draw_character_cell, character=self[x, y])
@@ -198,18 +246,17 @@ class Grid(GridBase):
     def set_drawaction(self, symbol, action):
         self.draw_actions[symbol] = action
 
-
     def get_statusbar_dimensions(self):
         w, h = pygame.display.get_surface().get_size()
         s = self.statusbar_size
         if self.statusbar_position == TOP:
             return (0, 0, w, s)
         elif self.statusbar_position == RIGHT:
-            return (w-s, 0, s, h)
+            return (w - s, 0, s, h)
         elif self.statusbar_position == BOTTOM:
-            return (0, h-s, w, s)
-        else: # LEFT
-            return (0,0,s,h)
+            return (0, h - s, w, s)
+        else:  # LEFT
+            return (0, 0, s, h)
 
     def clear_statusbar(self, color=None):
         if not color:
