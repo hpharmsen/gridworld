@@ -1,6 +1,5 @@
 import contextlib
 import copy
-import types
 from functools import partial
 
 with contextlib.redirect_stdout(None):  # Suppress Hello from Pygame community message
@@ -74,7 +73,7 @@ class Grid(GridBase):
         itemcolor=DARKGRAY,
         cellcolor=LIGHTGRAY,
         margincolor=DARKGRAY,
-        item_fontname=None,
+        font=None,
         framerate=60,
         sidebar_position=NONE,
         sidebar_size=0,
@@ -106,15 +105,14 @@ class Grid(GridBase):
         self.clock = pygame.time.Clock()
 
         pygame.font.init()
-        item_fontname = item_fontname if item_fontname else pygame.font.get_default_font()
-        self.font = pygame.font.Font(item_fontname, int(cellheight * 0.88))
+        self.font = font
 
         # Empty methods that can be set by the user
-        self.timer_action = lambda self: None
-        self.key_action = lambda self, key: None
-        self.mouse_click_action = lambda self, pos: None
-        self.cell_click_action = lambda self, cell: None
-        self.update_sidebar_action = lambda self: None
+        self.__timer_action = lambda: None
+        self.__key_action = lambda key: None
+        self.__mouse_click_action = lambda pos: None
+        self.__cell_click_action = lambda cell: None
+        self.__update_sidebar_action = lambda: None
 
     def set_screen_dimensions(self):
         sidebar_width = self.sidebar_size if self.sidebar_position in (LEFT, RIGHT) else 0
@@ -146,15 +144,23 @@ class Grid(GridBase):
     def cellwidth(self):
         return self.__cellwidth
 
+    @cellwidth.setter
+    def cellwidth(self, value):
+        self.__cellwidth = value
+
     @property
     def cellheight(self):
         return self.__cellheight
 
+    @cellheight.setter
+    def cellheight(self, value):
+        self.__cellheight = value
+
+    # Margins between the cells
+
     @property
     def margin(self):
         return self.__margin
-
-    # Margins between the cells
 
     @margin.setter
     def margin(self, value):
@@ -187,12 +193,13 @@ class Grid(GridBase):
         self.__itemcolor = value
 
     @property
-    def itemfont(self):
-        return self.__itemfont
+    def font(self):
+        return self.__font_filename
 
-    @itemfont.setter
-    def itemfont(self, value):
-        self.__itemfont = value
+    @font.setter
+    def font(self, value):
+        self.__font_filename = value
+        self.__font = pygame.font.Font(value, int(self.cellheight * 0.88))
 
     @property
     def sidebar_position(self):
@@ -252,54 +259,29 @@ class Grid(GridBase):
     def framerate(self, value):
         self.__framerate = value
 
-    ##### User overwritable actions #####
+    ##### User overwritable callbacks #####
 
-    @property
-    def timer_action(self):
-        return self.__timer_action
+    def set_timer_action(self, function):
+        self.__timer_action = function
 
-    @timer_action.setter
-    def timer_action(self, function):
-        self.__timer_action = types.MethodType(function, self)
+    def set_key_action(self, function):
+        self.__key_action = function
 
-    @property
-    def key_action(self):
-        return self.__key_action
+    def set_mouse_click_action(self, function):
+        self.__mouse_click_action = function
 
-    @key_action.setter
-    def key_action(self, function):
-        self.__key_action = types.MethodType(function, self)
+    def set_cell_click_action(self, function):
+        self.__cell_click_action = function
 
-    @property
-    def mouse_click_action(self):
-        return self.__mouse_click_action
-
-    @mouse_click_action.setter
-    def mouse_click_action(self, function):
-        self.__mouse_click_action = types.MethodType(function, self)
-
-    @property
-    def cell_click_action(self):
-        return self.__cell_click_action
-
-    @cell_click_action.setter
-    def cell_click_action(self, function):
-        self.__cell_click_action = types.MethodType(function, self)
-
-    @property
-    def update_sidebar_action(self):
-        return self.__update_sidebar_action
-
-    @update_sidebar_action.setter
-    def update_sidebar_action(self, function):
-        self.__update_sidebar_action = types.MethodType(function, self)
+    def set_update_sidebar_action(self, function):
+        self.__update_sidebar_action = function
 
     ##### Drawing functions #####
 
     def redraw(self):
         self.screen.fill(self.margincolor)
         self.redraw_area(0, 0, self.width, self.height)
-        self.update_sidebar_action()
+        self.__update_sidebar_action()
 
     def redraw_cell(self, left, top):
         self.redraw_area(left, top, 1, 1)
@@ -322,14 +304,20 @@ class Grid(GridBase):
         if not draw_action:
             # Drawing a character is the default
             draw_action = partial(self.draw_character_cell, character=self[x, y])
-        draw_action(cell_dimensions)
+        draw_action(self, cell_dimensions)
 
-    def draw_character_cell(self, cell_dimensions, character='?'):
-        cell = pygame.draw.rect(self.screen, self.cellcolor, cell_dimensions)
-        text = self.font.render(character, True, self.itemcolor)
+    def draw_character_cell(self, _, cell_dimensions, character='?'):
+        cell = self.draw_background(_, cell_dimensions, self.cellcolor)
+        text = self.__font.render(character, True, self.itemcolor)
         text_rect = text.get_rect()
         text_rect.center = cell.center
         self.screen.blit(text, text_rect)
+
+    def draw_background(self, _, cell_dimensions, color=GRAY):
+        try:
+            return pygame.draw.rect(self.screen, color, cell_dimensions)
+        except:
+            pass
 
     def clear_sidebar(self, color=None):
         if not color:
@@ -389,11 +377,14 @@ class Grid(GridBase):
         return res
 
     def load(self, filepath):
+        ua = self.update_automatic
+        self.update_automatic = False
         with open(filepath) as f:
             for y in range(self.height):
                 line = f.readline()
                 for x, char in enumerate(line):
                     self[x, y] = char
+        self.update_automatic = ua
 
     def save(self, filepath):
         with open(filepath, 'w') as f:
@@ -422,13 +413,13 @@ class Grid(GridBase):
                         self.set_screen_dimensions()
                         self.redraw()
                     else:
-                        self.key_action(event.key)
+                        self.__key_action(event.key)
                 elif event.type == pygame.MOUSEBUTTONUP:
                     pos = pygame.mouse.get_pos()
-                    self.mouse_click_action(pos)
+                    self.__mouse_click_action(pos)
                     coo = self.cell_at_position(pos)
                     if coo:
-                        self.cell_click_action(coo)
+                        self.__cell_click_action(coo)
                 elif event.type == pygame.QUIT:  # If user clicked close
                     pygame.quit()
                     return
@@ -436,7 +427,7 @@ class Grid(GridBase):
                     self.redraw()
 
             # --- Game logic
-            self.timer_action()
+            self.__timer_action()
 
             # --- Limit to x frames per second
             self.clock.tick(self.framerate)

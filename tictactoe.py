@@ -6,7 +6,7 @@ import pygame
 game_active = True
 
 
-def cell_click(grid, pos):
+def cell_click(pos):
     global game_active
     x, y = pos
     if game_active:
@@ -63,6 +63,6 @@ def check_win(grid, player_symbol):
 
 if __name__ == '__main__':
     grid = Grid(3, 3, 90, 90, title='Tic Tac Toe', margin=1)
-    # grid.cell_click_action = partial(cell_click, grid=grid)
-    grid.cell_click_action = cell_click
+    # grid.set_cell_click_action(partial(cell_click, grid=grid))
+    grid.set_cell_click_action(cell_click)
     grid.run()

@@ -86,11 +86,29 @@ _characters replaced by drawings_
 ### User input
 To interact with the grid you have four methods you can overload
 ```python
-grid.key_action = my_key_action
-grid.mouse_click_action = my_mouse_click_action
-grid.cell_click_action = my_handle_cell_click
-grid.frame_action = my_frame_action
-grid.update_statusbar = my_update_statusbar
+grid.set_key_action(my_key_action) 
+# Pass a function that expects a key core
+# Function will be called when a key is pressed. 
+# Parameter key is the Pygame key code.
+
+grid.set_mouse_click_action(my_mouse_click_action) 
+# Pass a function that expects (x,y) coo tuple which is the position (in pixels) of the click
+# Function will be called whenever the window receives a mouse click
+
+grid.set_cell_click_action(my_handle_cell_click)  
+# Pass a function that expects (x,y) tuple which is the cell clicked
+# Function will be called whenever the window receives a mouse click
+
+grid.set_timer_action(my_frame_action) 
+# Pass a function that expects parameters
+# Function will be called once every frame. 
+
+grid.set_update_statusbar_action( my_update_statusbar) 
+# Pass a function that expects no parameters        
+# Function will be called whenever the screen is redrawn. 
+# Gives you the possibility to update the contents of the statusbar
+
+
 ```
 For example, here's an implementation of responding to cursor keys or quitting whenever 'q' is pressed.
 ```python
@@ -104,37 +122,6 @@ def my_key_action(key):
             my_move(movement)
 ```
 
-Here's the definition of all callbacks:
-
-```python
-    def frame_action(self):
-        # Is called once every frame. 
-        # Should be overwritten by using program
-        pass  
-
-    def key_action(self, key):
-        # Is fired when a key is pressed. Parameter key is the Pygame key code.
-        # Should be overwritten by using program
-        pass  
-
-    def mouse_click_action(self, pos):
-        # Is fired whenever the window receives a mouse click
-        # Parameter pos,  (x,y) tuple, is the position (in pixels) of the click
-        # Should be overwritten by using program
-        pass  
-
-    def cell_click_action(self, cell):
-        # Is fired whenever a cell receives a mouse click
-        # Paramegter cell, (x,y) tuple, is the cell that was clicked
-        # Should be overwritten by using program
-        pass  
-
-    def update_statusbar(self):
-        # Is called whenever the screen is redrawn. Gives you the possibility to update the contents of the statusbar
-        # Should be overwritten by using program
-        pass  
-
-```
 
 ### Screen updating
 GridWorld has two parameters that control how the screen is updated:
