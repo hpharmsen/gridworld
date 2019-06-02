@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='gridworld',
-    version='0.1',
+    version='0.2',
     description='Array based grid which facilitates easy creation of grid based games and applications using Pygame.',
     url='https://github.com/hpharmsen/gridworld',
     author='HP Harmsen',
