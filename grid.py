@@ -3,7 +3,7 @@ import copy
 from functools import partial
 
 with contextlib.redirect_stdout(None):  # Suppress Hello from Pygame community message
-    import pygame
+    import pygame # Warm hello back to the Pygame community by the way.
 
 # Define some colors
 LIGHTGRAY = (192, 192, 192)
@@ -18,16 +18,29 @@ BOTTOM = 4
 
 
 class GridBase:
-    ''' Basic grid datastructure independent of any display code'''
+    ''' Basic grid datastructure independent of any display code
+
+        Grid is a 2D space with on each square a list of stacked items
+        the items are characters.
+        In most applications the list will be either empty (empty square) or contain a single element
+        since often a square can contain but a single element.
+        It can be accessed/set using setting grid[x,y].
+
+        It is possible however to stack multiple elements on a square (think checkers or separating
+        the background from the foreground.
+        To add an extra element use grid.push[x,y]
+        To access a certain level use grid[x,y,z].
+        Without specifing z, the top element is always returned/replaced.
+    '''
 
     def __init__(self, width, height):
         self.__width = width  # Width and height in number of cells
         self.__height = height
-        self.__grid = [['' for x in range(self.width)] for y in range(self.height)]
+        self.clear_all()
 
     @classmethod
     def from_grid(cls, grid):
-        ''' Alternative constructor, creat from another grid '''
+        ''' Alternative constructor, create from another grid '''
         newgrid = cls(grid.width, grid.height)
         newgrid.__grid = copy.deepcopy(grid.grid)
         return newgrid
@@ -45,20 +58,63 @@ class GridBase:
         return self.__grid
 
     def __getitem__(self, coo):
-        ''' Makes it possible to access the grid like a 2-array'''
-        x, y = coo
+        ''' Makes it possible to access the grid like a 2D or 3D-array'''
+        x, y, *z = coo
+        if z == []:
+            z = -1 # Top moste element on the grid
         try:
-            return self.grid[y][x]
+            return self.grid[y][x][z]
         except:
-            return ''
+            return None
 
     def __setitem__(self, coo, value):
         ''' Makes it possible to update the grid like a 2-array'''
+        x, y, *z = coo
+
+        if x<0 or y<0 or x>=self.width or y>=self.height:
+            return # Position is out of grid. Ignore set operation
+
+        if value == None:
+            self.grid[y][x] = [] # clear the square
+        elif z == [] or self.grid[y][x]==[] or z[0] == len(self.grid[y][x]):
+            self.grid[y][x] += [value] # Add new value
+        elif z[0] > len(self.grid[y][x]):
+            raise Exception(f'You are tying to update element {z[0]} at position ({x},{y}) but ({x},{y}) contains only {len(self.grid[y][x])} elements.')
+        else:
+            self.grid[y][x][z[0]] = value  # Replace current value
+
+    def push(self, coo, value):
+        ''' Put an item on top of possible existing items at grid square'''
         x, y = coo
-        try:
-            self.grid[y][x] = value
-        except:
-            pass
+
+        if x<0 or y<0 or x>=self.width or y>=self.height:
+            return # Position is out of grid. Ignore push operation
+
+        self.grid[y][x] += [value] # Add new value
+
+
+    def pop(self, coo):
+        ''' Put an item on top of possible existing items at grid square'''
+        x, y = coo
+
+        if x<0 or y<0 or x>=self.width or y>=self.height:
+            return None # Position is out of grid.
+
+        value = self.grid[y][x]
+        self.grid[y][x] = self.grid[y][x][:-1]
+        return value
+
+    def clear(self, coo):
+        ''' Delete all items from a square '''
+        x, y = coo
+
+        if x<0 or y<0 or x>=self.width or y>=self.height:
+            return None # Position is out of grid.
+
+        self.grid[y][x] = []
+
+    def clear_all(self):
+        self.__grid = [[[] for x in range(self.width)] for y in range(self.height)]
 
 
 class Grid(GridBase):
@@ -107,7 +163,7 @@ class Grid(GridBase):
         pygame.font.init()
         self.font = font
 
-        # Empty methods that can be set by the user
+        # Empty callbacks that can be set by the user
         self.__timer_action = lambda: None
         self.__key_action = lambda key: None
         self.__mouse_click_action = lambda pos: None
@@ -136,7 +192,26 @@ class Grid(GridBase):
         ''' Sets a grid value like a 2D array and redraws the cell if requested '''
         super().__setitem__(coo, value)
         if self.update_automatic:
-            self.redraw_cell(*coo)
+            self.redraw_cell(*coo[:2])
+
+    def push(self, coo, value):
+        ''' Sets a grid value on top of any existing values at a grid square '''
+        super().push(coo, value)
+        if self.update_automatic:
+            self.redraw_cell(*coo[:2])
+
+    def pop(self, coo):
+        ''' Sets a grid value on top of any existing values at a grid square '''
+        value = super().pop(coo)
+        if self.update_automatic:
+            self.redraw_cell(*coo[:2])
+        return value
+
+    def clear(self, coo):
+        ''' Sets a grid value on top of any existing values at a grid square '''
+        value = super().clear(coo)
+        if self.update_automatic:
+            self.redraw_cell(*coo[:2])
 
     # Cell size
 
@@ -379,11 +454,13 @@ class Grid(GridBase):
     def load(self, filepath):
         ua = self.update_automatic
         self.update_automatic = False
+        self.clear_all()
         with open(filepath) as f:
             for y in range(self.height):
                 line = f.readline()
                 for x, char in enumerate(line):
-                    self[x, y] = char
+                    if char != ' ':
+                        self[x, y] = char
         self.update_automatic = ua
 
     def save(self, filepath):

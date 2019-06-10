@@ -9,6 +9,7 @@ using Pygame.
 ### Creating the grid
 To create a 10x10 grid of 30x30 pixel cells:
 ```python
+from grid import Grid
 grid = Grid(10, 10, 30, 30)
 ```
 
