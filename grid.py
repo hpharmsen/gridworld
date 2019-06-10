@@ -3,7 +3,7 @@ import copy
 from functools import partial
 
 with contextlib.redirect_stdout(None):  # Suppress Hello from Pygame community message
-    import pygame # Warm hello back to the Pygame community by the way.
+    import pygame  # Warm hello back to the Pygame community by the way.
 
 # Define some colors
 LIGHTGRAY = (192, 192, 192)
@@ -61,7 +61,9 @@ class GridBase:
         ''' Makes it possible to access the grid like a 2D or 3D-array'''
         x, y, *z = coo
         if z == []:
-            z = -1 # Top moste element on the grid
+            z = -1  # Top moste element on the grid
+        else:
+            z = z[0]
         try:
             return self.grid[y][x][z]
         except:
@@ -71,15 +73,17 @@ class GridBase:
         ''' Makes it possible to update the grid like a 2-array'''
         x, y, *z = coo
 
-        if x<0 or y<0 or x>=self.width or y>=self.height:
-            return # Position is out of grid. Ignore set operation
+        if x < 0 or y < 0 or x >= self.width or y >= self.height:
+            return  # Position is out of grid. Ignore set operation
 
         if value == None:
-            self.grid[y][x] = [] # clear the square
-        elif z == [] or self.grid[y][x]==[] or z[0] == len(self.grid[y][x]):
-            self.grid[y][x] += [value] # Add new value
+            self.grid[y][x] = []  # clear the square
+        elif z == [] or self.grid[y][x] == [] or z[0] == len(self.grid[y][x]):
+            self.grid[y][x] += [value]  # Add new value
         elif z[0] > len(self.grid[y][x]):
-            raise Exception(f'You are tying to update element {z[0]} at position ({x},{y}) but ({x},{y}) contains only {len(self.grid[y][x])} elements.')
+            raise Exception(
+                f'You are tying to update element {z[0]} at position ({x},{y}) but ({x},{y}) contains only {len(self.grid[y][x])} elements.'
+            )
         else:
             self.grid[y][x][z[0]] = value  # Replace current value
 
@@ -87,18 +91,17 @@ class GridBase:
         ''' Put an item on top of possible existing items at grid square'''
         x, y = coo
 
-        if x<0 or y<0 or x>=self.width or y>=self.height:
-            return # Position is out of grid. Ignore push operation
+        if x < 0 or y < 0 or x >= self.width or y >= self.height:
+            return  # Position is out of grid. Ignore push operation
 
-        self.grid[y][x] += [value] # Add new value
-
+        self.grid[y][x] += [value]  # Add new value
 
     def pop(self, coo):
         ''' Put an item on top of possible existing items at grid square'''
         x, y = coo
 
-        if x<0 or y<0 or x>=self.width or y>=self.height:
-            return None # Position is out of grid.
+        if x < 0 or y < 0 or x >= self.width or y >= self.height:
+            return None  # Position is out of grid.
 
         value = self.grid[y][x]
         self.grid[y][x] = self.grid[y][x][:-1]
@@ -108,8 +111,8 @@ class GridBase:
         ''' Delete all items from a square '''
         x, y = coo
 
-        if x<0 or y<0 or x>=self.width or y>=self.height:
-            return None # Position is out of grid.
+        if x < 0 or y < 0 or x >= self.width or y >= self.height:
+            return None  # Position is out of grid.
 
         self.grid[y][x] = []
 
@@ -451,16 +454,20 @@ class Grid(GridBase):
         res += '\n'
         return res
 
-    def load(self, filepath):
+    def load(self, filepath, resize=False):
+        with open(filepath) as f:
+            lines = f.readlines()
         ua = self.update_automatic
         self.update_automatic = False
-        self.clear_all()
-        with open(filepath) as f:
-            for y in range(self.height):
-                line = f.readline()
-                for x, char in enumerate(line):
-                    if char != ' ':
-                        self[x, y] = char
+        if resize:
+            w = max([len(line) for line in lines]) - 1
+            h = len(lines)
+            super().__init__(w, h)
+            self.set_screen_dimensions()
+        for y, line in enumerate(lines):
+            for x, char in enumerate(line):
+                if not char in (' ', '\n'):
+                    self[x, y] = char
         self.update_automatic = ua
 
     def save(self, filepath):
