@@ -60,12 +60,9 @@ class GridBase:
     def __getitem__(self, coo):
         ''' Makes it possible to access the grid like a 2D or 3D-array'''
         x, y, *z = coo
-        if z == []:
-            z = -1  # Top moste element on the grid
-        else:
-            z = z[0]
+        z = z[0] if z != [] else -1
         try:
-            return self.grid[y][x][z]
+            return self.__grid[y][x][z]
         except:
             return None
 
@@ -76,16 +73,18 @@ class GridBase:
         if x < 0 or y < 0 or x >= self.width or y >= self.height:
             return  # Position is out of grid. Ignore set operation
 
+        z = z[0] if z != [] else -1
+
         if value == None:
-            self.grid[y][x] = []  # clear the square
-        elif z == [] or self.grid[y][x] == [] or z[0] == len(self.grid[y][x]):
-            self.grid[y][x] += [value]  # Add new value
-        elif z[0] > len(self.grid[y][x]):
+            self.__grid[y][x] = []  # clear the square
+        elif self.__grid[y][x] == [] or z == len(self.__grid[y][x]):
+            self.__grid[y][x] += [value]  # Add new value
+        elif z > len(self.__grid[y][x]):
             raise Exception(
-                f'You are tying to update element {z[0]} at position ({x},{y}) but ({x},{y}) contains only {len(self.grid[y][x])} elements.'
+                f'You are tying to update element {z[0]} at position ({x},{y}) but ({x},{y}) contains only {len(self.__grid[y][x])} elements.'
             )
         else:
-            self.grid[y][x][z[0]] = value  # Replace current value
+            self.__grid[y][x][z] = value  # Replace current value
 
     def push(self, coo, value):
         ''' Put an item on top of possible existing items at grid square'''
@@ -94,7 +93,7 @@ class GridBase:
         if x < 0 or y < 0 or x >= self.width or y >= self.height:
             return  # Position is out of grid. Ignore push operation
 
-        self.grid[y][x] += [value]  # Add new value
+        self.__grid[y][x] += [value]  # Add new value
 
     def pop(self, coo):
         ''' Put an item on top of possible existing items at grid square'''
@@ -103,8 +102,8 @@ class GridBase:
         if x < 0 or y < 0 or x >= self.width or y >= self.height:
             return None  # Position is out of grid.
 
-        value = self.grid[y][x]
-        self.grid[y][x] = self.grid[y][x][:-1]
+        value = self.__grid[y][x]
+        self.__grid[y][x] = self.__grid[y][x][:-1]
         return value
 
     def clear(self, coo):
@@ -114,7 +113,7 @@ class GridBase:
         if x < 0 or y < 0 or x >= self.width or y >= self.height:
             return None  # Position is out of grid.
 
-        self.grid[y][x] = []
+        self.__grid[y][x] = []
 
     def clear_all(self):
         self.__grid = [[[] for x in range(self.width)] for y in range(self.height)]
@@ -465,9 +464,8 @@ class Grid(GridBase):
             super().__init__(w, h)
             self.set_screen_dimensions()
         for y, line in enumerate(lines):
-            for x, char in enumerate(line):
-                if not char in (' ', '\n'):
-                    self[x, y] = char
+            for x, char in enumerate(line[:-1]):
+                self[x, y] = char
         self.update_automatic = ua
 
     def save(self, filepath):
