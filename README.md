@@ -4,6 +4,9 @@ Implementation of an array based grid which facilitates
 easy creation of grid based games and applications 
 using Pygame.
 
+## Installation
+pip install git+https://github.com/hpharmsen/gridworld
+
 ## Usage
 
 ### Creating the grid
