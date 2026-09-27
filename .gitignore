@@ -104,3 +104,6 @@ venv.bak/
 .mypy_cache/
 
 experiments
+# Local
+.DS_Store
+.idea/

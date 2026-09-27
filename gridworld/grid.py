@@ -2,6 +2,9 @@ import contextlib
 import copy
 from functools import partial
 
+## OMSCHRIJVEN NAAR ARCADE: https://opensource.com/article/18/4/easy-2d-game-creation-python-and-arcade
+
+
 with contextlib.redirect_stdout(None):  # Suppress Hello from Pygame community message
     import pygame  # Warm hello back to the Pygame community by the way.
 

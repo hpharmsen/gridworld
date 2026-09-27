@@ -1,0 +1,19 @@
+[project]
+name = "gridworld"
+version = "1.0"
+description = "Pygame based grid for creating 2D applications and games."
+authors = [{ name = "HP Harmsen", email = "hp@harmsen.nl" }]
+license = "Unlicense"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = ["pygame-ce"]
+
+[project.urls]
+Homepage = "https://github.com/hpharmsen/gridworld"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["gridworld"]
